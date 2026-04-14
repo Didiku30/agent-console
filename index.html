@@ -90,7 +90,7 @@ async function callClaude(systemPrompt, messages) {
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, system:systemPrompt, messages })
   });
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message||"API error");
+  if (data.error) throw new Error(data.error.message || data.error.type || "API error");
   return data.content?.[0]?.text || "Nu am putut genera un răspuns.";
 }
 
@@ -423,7 +423,7 @@ function ApiKeyScreen({ onSave }) {
   const [show, setShow] = useState(false);
   const [testing, setTesting] = useState(false);
   const [err, setErr] = useState("");
-  const valid = key.trim().startsWith("sk-ant-");
+  const valid = key.trim().length > 20;
   const save = async () => {
     if (!valid) return;
     setTesting(true); setErr("");
@@ -432,7 +432,7 @@ function ApiKeyScreen({ onSave }) {
       await callClaude("Say OK in one word.", [{role:"user",content:"ping"}]);
       onSave();
     } catch(e) {
-      setErr("API key invalid. Verifică și încearcă din nou.");
+      setErr("Eroare: " + (e.message || "API key invalid. Verifică și încearcă din nou."));
       localStorage.removeItem(API_KEY_STORAGE);
     }
     setTesting(false);
