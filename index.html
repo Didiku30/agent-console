@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Console — DD Graphic Art</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+  :root {
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f5f5f4;
+    --color-background-tertiary: #f0efed;
+    --color-text-primary: #1a1a18;
+    --color-text-secondary: #6b6b68;
+    --color-text-tertiary: #a0a09d;
+    --color-border-tertiary: rgba(0,0,0,0.08);
+    --color-border-secondary: rgba(0,0,0,0.14);
+    --color-border-primary: rgba(0,0,0,0.22);
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "Consolas", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-background-primary: #1a1a18;
+      --color-background-secondary: #242422;
+      --color-background-tertiary: #1e1e1c;
+      --color-text-primary: #f0efe9;
+      --color-text-secondary: #9b9b96;
+      --color-text-tertiary: #606060;
+      --color-border-tertiary: rgba(255,255,255,0.07);
+      --color-border-secondary: rgba(255,255,255,0.12);
+      --color-border-primary: rgba(255,255,255,0.2);
+    }
+  }
+
+  input, textarea, button, select {
+    font-family: var(--font-sans);
+  }
+
+  textarea { field-sizing: content; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-secondary); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const STORAGE_KEY = "dda_agents_v1";
+const FREE_CHAT_KEY = "dda_free_chat_v1";
+const API_KEY_STORAGE = "dda_api_key_v1";
+const LOGO_SRC = "data:image/png;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/9k=";
+const ACCENT_COLORS = ["#1D9E75","#7F77DD","#378ADD","#D85A30","#D4537E","#639922","#BA7517","#888780"];
+
+const DEFAULT_AGENTS = [
+  { id:"a1", name:"LohnBot Expert", initials:"LB", accentColor:"#1D9E75",
+    description:"Expert în lohnverrechnung austriac, ASVG, KV",
+    systemPrompt:"Du bist ein österreichischer Lohnverrechnungsexperte. Du kennst das ASVG, alle Kollektivverträge, Lohnsteuerrecht, ELDA-Meldungen und das WKO-Regelwerk auswendig. Antworte präzise auf Deutsch.",
+    skills:["ASVG","Kollektivvertrag","ELDA","Lohnsteuer","Krankenstand"], history:[], created:Date.now() },
+  { id:"a2", name:"Content Creator", initials:"CC", accentColor:"#7F77DD",
+    description:"Blog posts, LinkedIn, newsletter în română și germană",
+    systemPrompt:"Ești un specialist în conținut profesional bilingv (română și germană). Creezi articole de blog, postări LinkedIn, newsletter-uri. Stilul tău este clar și profesionist.",
+    skills:["Blog","LinkedIn","Newsletter","SEO","Bilingv"], history:[], created:Date.now() }
+];
+
+function loadAgents() { try { const r=localStorage.getItem(STORAGE_KEY); if(r) return JSON.parse(r); } catch{} return null; }
+function saveAgents(a) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(a)); } catch{} }
+function loadFreeChat() { try { const r=localStorage.getItem(FREE_CHAT_KEY); if(r) return JSON.parse(r); } catch{} return []; }
+function saveFreeChat(m) { try { localStorage.setItem(FREE_CHAT_KEY, JSON.stringify(m)); } catch{} }
+function getApiKey() { try { return localStorage.getItem(API_KEY_STORAGE)||""; } catch{} return ""; }
+
+async function callClaude(systemPrompt, messages) {
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("NO_KEY");
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, system:systemPrompt, messages })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message||"API error");
+  return data.content?.[0]?.text || "Nu am putut genera un răspuns.";
+}
+
+function Avatar({ agent, size=32 }) {
+  if (agent.isNative) return (
+    <div style={{ width:size, height:size, borderRadius:"50%", background:"#FDF0EB", border:"1.5px solid #D9775755", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
+      <img src={LOGO_SRC} alt="DD" style={{ width:size*0.62, height:size*0.62, objectFit:"contain" }}/>
+    </div>
+  );
+  return (
+    <div style={{ width:size, height:size, borderRadius:"50%", background:agent.accentColor+"22", border:`1.5px solid ${agent.accentColor}55`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:Math.max(10,size*0.33), fontWeight:500, color:agent.accentColor, flexShrink:0, userSelect:"none" }}>
+      {agent.initials||"?"}
+    </div>
+  );
+}
+
+function SendIcon() { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7h9M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+function PlusIcon() { return <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5v10M1.5 6.5h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>; }
+function EditIcon() { return <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2L4 10H2V8L8.5 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+function TrashIcon() { return <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3h9M4.5 3V2h3v1M3.5 3l.5 7h4l.5-7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+function CollapseIcon({ flipped }) { return <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{transition:"transform 0.2s",transform:flipped?"rotate(180deg)":"rotate(0deg)"}}><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+
+function ThinkingDots() {
+  return (
+    <span style={{display:"inline-flex",gap:3,alignItems:"center"}}>
+      {[0,1,2].map(i=><span key={i} style={{display:"inline-block",width:5,height:5,borderRadius:"50%",background:"var(--color-text-tertiary)",animation:`tdot 1.2s ease-in-out ${i*0.2}s infinite`}}/>)}
+      <style>{`@keyframes tdot{0%,80%,100%{transform:scale(0.5);opacity:0.4}40%{transform:scale(1);opacity:1}}`}</style>
+    </span>
+  );
+}
+
+function renderMd(text) {
+  if (!text) return null;
+  return text.split('\n').map((line, li, arr) => {
+    const parts = []; let rem = line; let k = 0;
+    while (rem.length > 0) {
+      const cm = rem.match(/^(.*?)`([^`]+)`(.*)/s);
+      const bm = rem.match(/^(.*?)\*\*([^*]+)\*\*(.*)/s);
+      if (cm && (!bm || cm[1].length <= bm[1].length)) {
+        if (cm[1]) parts.push(<span key={k++}>{cm[1]}</span>);
+        parts.push(<code key={k++} style={{fontSize:12,padding:"1px 5px",borderRadius:4,background:"var(--color-background-secondary)",border:"0.5px solid var(--color-border-tertiary)",fontFamily:"var(--font-mono)"}}>{cm[2]}</code>);
+        rem = cm[3];
+      } else if (bm) {
+        if (bm[1]) parts.push(<span key={k++}>{bm[1]}</span>);
+        parts.push(<strong key={k++} style={{fontWeight:600}}>{bm[2]}</strong>);
+        rem = bm[3];
+      } else { parts.push(<span key={k++}>{rem}</span>); rem=''; }
+    }
+    return <span key={li}>{parts}{li<arr.length-1?<br/>:null}</span>;
+  });
+}
+
+function MessageRow({ msg, agent }) {
+  const isUser = msg.role==="user";
+  return (
+    <div style={{padding:"18px 24px",borderBottom:"0.5px solid var(--color-border-tertiary)"}}>
+      <div style={{maxWidth:700,margin:"0 auto",display:"flex",gap:12,alignItems:"flex-start"}}>
+        <div style={{flexShrink:0,paddingTop:1}}>
+          {isUser
+            ? <div style={{width:28,height:28,borderRadius:"50%",background:"var(--color-background-secondary)",border:"0.5px solid var(--color-border-secondary)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:500,color:"var(--color-text-secondary)"}}> Tu</div>
+            : <Avatar agent={agent} size={28}/>}
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:13,fontWeight:500,marginBottom:5,color:"var(--color-text-primary)"}}>{isUser?"Tu":agent.name}</div>
+          <div style={{fontSize:14,lineHeight:1.75,color:"var(--color-text-primary)",wordBreak:"break-word"}}>
+            {msg.loading ? <ThinkingDots/> : renderMd(msg.content)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatInput({ onSend, loading, placeholder }) {
+  const [input, setInput] = useState("");
+  const taRef = useRef(null);
+  const canSend = input.trim() && !loading;
+  const send = () => { if (!canSend) return; onSend(input.trim()); setInput(""); if(taRef.current) taRef.current.style.height="24px"; };
+  return (
+    <div style={{padding:"14px 24px 18px",flexShrink:0,borderTop:"0.5px solid var(--color-border-tertiary)"}}>
+      <div style={{maxWidth:700,margin:"0 auto"}}>
+        <div style={{border:"0.5px solid var(--color-border-secondary)",borderRadius:14,background:"var(--color-background-secondary)",overflow:"hidden"}}>
+          <textarea ref={taRef} value={input}
+            onChange={e=>{ setInput(e.target.value); e.target.style.height="24px"; e.target.style.height=Math.min(e.target.scrollHeight,160)+"px"; }}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
+            placeholder={placeholder} rows={1} disabled={loading}
+            style={{display:"block",width:"100%",background:"none",border:"none",outline:"none",resize:"none",padding:"12px 16px 0",fontSize:14,lineHeight:1.6,color:"var(--color-text-primary)",fontFamily:"var(--font-sans)",minHeight:24,maxHeight:160,overflowY:"auto",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",justifyContent:"flex-end",padding:"8px 10px 10px"}}>
+            <button onClick={send} disabled={!canSend}
+              style={{width:30,height:30,borderRadius:8,border:"none",background:canSend?"var(--color-text-primary)":"var(--color-border-tertiary)",color:canSend?"var(--color-background-primary)":"var(--color-text-tertiary)",cursor:canSend?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}>
+              <SendIcon/>
+            </button>
+          </div>
+        </div>
+        <div style={{fontSize:11,color:"var(--color-text-tertiary)",textAlign:"center",marginTop:7}}>Enter · Shift+Enter linie nouă</div>
+      </div>
+    </div>
+  );
+}
+
+function ChatPanel({ agent, onUpdateHistory, onClose }) {
+  const [messages, setMessages] = useState(agent.history||[]);
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages]);
+  useEffect(()=>{ onUpdateHistory(messages); },[messages]);
+
+  const send = async (text) => {
+    const hist=[...messages,{role:"user",content:text,ts:Date.now()}];
+    setMessages(hist); setLoading(true);
+    setMessages(p=>[...p,{role:"assistant",content:"",loading:true,ts:Date.now()}]);
+    try {
+      const reply = await callClaude(agent.systemPrompt, hist.map(m=>({role:m.role,content:m.content})));
+      setMessages(p=>{ const u=[...p]; u[u.length-1]={role:"assistant",content:reply,ts:Date.now()}; return u; });
+    } catch(e) {
+      const msg = e.message==="NO_KEY"?"Niciun API key setat.":"Eroare de conexiune.";
+      setMessages(p=>{ const u=[...p]; u[u.length-1]={role:"assistant",content:msg,ts:Date.now()}; return u; });
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:0}}>
+      <div style={{padding:"11px 20px",borderBottom:"0.5px solid var(--color-border-tertiary)",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <Avatar agent={agent} size={30}/>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:500}}>{agent.name}</div>
+          <div style={{fontSize:11,color:"var(--color-text-secondary)"}}> {agent.description}</div>
+        </div>
+        <button onClick={()=>{ if(confirm("Ștergi istoricul?")) setMessages([]); }} style={{background:"none",border:"0.5px solid var(--color-border-tertiary)",borderRadius:6,padding:"4px 8px",fontSize:12,color:"var(--color-text-secondary)",cursor:"pointer",display:"flex",alignItems:"center",gap:3}}><TrashIcon/> Clear</button>
+        <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"var(--color-text-secondary)",padding:"2px 4px"}}>✕</button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",minHeight:0}}>
+        {messages.length===0 ? (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:300,padding:48,textAlign:"center"}}>
+            <Avatar agent={agent} size={52}/>
+            <div style={{marginTop:14,fontSize:18,fontWeight:500}}>{agent.name}</div>
+            <div style={{marginTop:6,fontSize:14,color:"var(--color-text-secondary)",maxWidth:320,lineHeight:1.7}}>{agent.description}</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:14,justifyContent:"center"}}>
+              {agent.skills.map(s=><span key={s} style={{fontSize:11,padding:"2px 8px",borderRadius:99,background:agent.accentColor+"18",color:agent.accentColor,fontWeight:500}}>{s}</span>)}
+            </div>
+          </div>
+        ) : messages.map((m,i)=><MessageRow key={i} msg={m} agent={agent}/>)}
+        <div ref={bottomRef}/>
+      </div>
+      <ChatInput onSend={send} loading={loading} placeholder={`Mesaj pentru ${agent.name}…`}/>
+    </div>
+  );
+}
+
+function FreeChatPanel() {
+  const freeAgent = { id:"free", name:"Claude", initials:"C", accentColor:"#D97757", isNative:true,
+    systemPrompt:"You are Claude, a helpful AI assistant made by Anthropic. Answer in the same language the user writes in. Be helpful, clear, and thoughtful." };
+  const [messages, setMessages] = useState(()=>loadFreeChat());
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef(null);
+  useEffect(()=>{ bottomRef.current?.scrollIntoView({behavior:"smooth"}); },[messages]);
+  useEffect(()=>{ saveFreeChat(messages); },[messages]);
+
+  const send = async (text) => {
+    const hist=[...messages,{role:"user",content:text,ts:Date.now()}];
+    setMessages(hist); setLoading(true);
+    setMessages(p=>[...p,{role:"assistant",content:"",loading:true,ts:Date.now()}]);
+    try {
+      const reply = await callClaude(freeAgent.systemPrompt, hist.map(m=>({role:m.role,content:m.content})));
+      setMessages(p=>{ const u=[...p]; u[u.length-1]={role:"assistant",content:reply,ts:Date.now()}; return u; });
+    } catch(e) {
+      setMessages(p=>{ const u=[...p]; u[u.length-1]={role:"assistant",content:"Eroare de conexiune.",ts:Date.now()}; return u; });
+    }
+    setLoading(false);
+  };
+
+  const suggestions = ["Explică-mi cum funcționează ASVG în Austria","Scrie un post LinkedIn despre AI în HR","Ajută-mă să debug-uiesc cod Python","Care sunt cele mai bune practici pentru lohnverrechnung?"];
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:0}}>
+      <div style={{flex:1,overflowY:"auto",minHeight:0}}>
+        {messages.length===0 ? (
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:360,padding:"40px 32px",textAlign:"center"}}>
+            <Avatar agent={freeAgent} size={56}/>
+            <div style={{marginTop:16,fontSize:20,fontWeight:500}}>Claude</div>
+            <div style={{marginTop:8,fontSize:14,color:"var(--color-text-secondary)",maxWidth:360,lineHeight:1.7}}>Chat liber — întreabă orice, exact ca pe claude.ai.</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:20,width:"100%",maxWidth:380}}>
+              {suggestions.map(s=>(
+                <button key={s} onClick={()=>send(s)}
+                  style={{padding:"9px 14px",borderRadius:8,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:13,color:"var(--color-text-secondary)",textAlign:"left"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="var(--color-background-secondary)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : messages.map((m,i)=><MessageRow key={i} msg={m} agent={freeAgent}/>)}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{padding:"14px 24px 18px",flexShrink:0,borderTop:"0.5px solid var(--color-border-tertiary)"}}>
+        <div style={{maxWidth:700,margin:"0 auto"}}>
+          <div style={{border:"0.5px solid var(--color-border-secondary)",borderRadius:14,background:"var(--color-background-secondary)",overflow:"hidden"}}>
+            <FreeChatInput onSend={send} loading={loading}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+            <button onClick={()=>{ if(confirm("Ștergi istoricul?")) setMessages([]); }} style={{background:"none",border:"none",fontSize:11,color:"var(--color-text-tertiary)",cursor:"pointer",display:"flex",alignItems:"center",gap:3}}><TrashIcon/> Clear</button>
+            <span style={{fontSize:11,color:"var(--color-text-tertiary)"}}>Enter · Shift+Enter linie nouă</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FreeChatInput({ onSend, loading }) {
+  const [input, setInput] = useState("");
+  const taRef = useRef(null);
+  const canSend = input.trim() && !loading;
+  const send = () => { if(!canSend) return; onSend(input.trim()); setInput(""); if(taRef.current) taRef.current.style.height="24px"; };
+  return (
+    <>
+      <textarea ref={taRef} value={input}
+        onChange={e=>{ setInput(e.target.value); e.target.style.height="24px"; e.target.style.height=Math.min(e.target.scrollHeight,160)+"px"; }}
+        onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
+        placeholder="Întreabă orice…" rows={1} disabled={loading}
+        style={{display:"block",width:"100%",background:"none",border:"none",outline:"none",resize:"none",padding:"12px 16px 0",fontSize:14,lineHeight:1.6,color:"var(--color-text-primary)",fontFamily:"var(--font-sans)",minHeight:24,maxHeight:160,overflowY:"auto",boxSizing:"border-box"}}/>
+      <div style={{display:"flex",justifyContent:"flex-end",padding:"8px 10px 10px"}}>
+        <button onClick={send} disabled={!canSend}
+          style={{width:30,height:30,borderRadius:8,border:"none",background:canSend?"var(--color-text-primary)":"var(--color-border-tertiary)",color:canSend?"var(--color-background-primary)":"var(--color-text-tertiary)",cursor:canSend?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s"}}>
+          <SendIcon/>
+        </button>
+      </div>
+    </>
+  );
+}
+
+function AgentModal({ agent, onSave, onClose }) {
+  const isNew = !agent?.id;
+  const [form, setForm] = useState(agent||{ name:"", initials:"", description:"", systemPrompt:"", skills:[], accentColor:ACCENT_COLORS[0] });
+  const [skillInput, setSkillInput] = useState("");
+  const set = (k,v) => setForm(f=>(({...f,[k]:v})));
+  const autoInit = n => { const p=n.trim().split(" "); return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.slice(0,2).toUpperCase(); };
+  const addSkill = () => { if(skillInput.trim()&&!form.skills.includes(skillInput.trim())){set("skills",[...form.skills,skillInput.trim()]);setSkillInput("");} };
+  const valid = form.name.trim()&&form.systemPrompt.trim();
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>
+      <div style={{background:"#ffffff",borderRadius:16,width:"100%",maxWidth:500,maxHeight:"90vh",overflow:"auto",border:"0.5px solid var(--color-border-secondary)"}}>
+        <div style={{padding:"15px 20px",borderBottom:"0.5px solid var(--color-border-tertiary)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:15,fontWeight:500}}>{isNew?"Agent nou":"Editează agentul"}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--color-text-secondary)"}}>✕</button>
+        </div>
+        <div style={{padding:20}}>
+          <div style={{marginBottom:18,display:"flex",gap:14,alignItems:"center"}}>
+            <Avatar agent={{...form,initials:form.initials||"?"}} size={52}/>
+            <div>
+              <div style={{fontSize:11,color:"var(--color-text-secondary)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,marginBottom:8}}>Culoare</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {ACCENT_COLORS.map(c=><button key={c} onClick={()=>set("accentColor",c)} style={{width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",border:form.accentColor===c?"3px solid var(--color-text-primary)":"2px solid transparent"}}/>)}
+              </div>
+            </div>
+          </div>
+          {[
+            {label:"Nume agent",key:"name",ph:"ex: Expert Juridic",cb:v=>{set("name",v);if(!form.initials||form.initials===autoInit(form.name))set("initials",autoInit(v||" "));}},
+            {label:"Inițiale (2 litere)",key:"initials",ph:"ex: EJ",cb:v=>set("initials",v.toUpperCase().slice(0,2))},
+            {label:"Descriere scurtă",key:"description",ph:"ex: Specialist în drept muncii",cb:v=>set("description",v)}
+          ].map(({label,key,ph,cb})=>(
+            <div key={key} style={{marginBottom:14}}>
+              <label style={{fontSize:11,color:"var(--color-text-secondary)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5}}>{label}</label>
+              <input value={form[key]} onChange={e=>cb(e.target.value)} placeholder={ph}
+                style={{width:"100%",marginTop:6,padding:"9px 12px",borderRadius:8,fontSize:14,boxSizing:"border-box",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",outline:"none"}}/>
+            </div>
+          ))}
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,color:"var(--color-text-secondary)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5}}>System prompt</label>
+            <textarea value={form.systemPrompt} onChange={e=>set("systemPrompt",e.target.value)} placeholder="Definește expertiza și comportamentul agentului..." rows={5}
+              style={{width:"100%",marginTop:6,padding:"9px 12px",borderRadius:8,fontSize:13,lineHeight:1.6,boxSizing:"border-box",resize:"vertical",border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",fontFamily:"var(--font-mono)",outline:"none"}}/>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:11,color:"var(--color-text-secondary)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5}}>Skill-uri</label>
+            <div style={{display:"flex",gap:6,marginTop:6}}>
+              <input value={skillInput} onChange={e=>setSkillInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSkill();}}} placeholder="Adaugă skill…"
+                style={{flex:1,padding:"9px 12px",borderRadius:8,fontSize:13,border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",outline:"none"}}/>
+              <button onClick={addSkill} style={{padding:"9px 14px",borderRadius:8,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:16}}>+</button>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
+              {form.skills.map(s=><span key={s} style={{display:"flex",alignItems:"center",gap:4,fontSize:12,padding:"3px 10px",borderRadius:99,background:form.accentColor+"18",color:form.accentColor}}>{s}<button onClick={()=>set("skills",form.skills.filter(x=>x!==s))} style={{background:"none",border:"none",cursor:"pointer",fontSize:11,color:form.accentColor,padding:0}}>✕</button></span>)}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={onClose} style={{flex:1,padding:10,borderRadius:8,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:14}}>Anulează</button>
+            <button onClick={()=>{if(!valid)return;onSave({...form,id:form.id||`agent_${Date.now()}`,history:form.history||[],created:form.created||Date.now()});}}
+              style={{flex:2,padding:10,borderRadius:8,border:"none",background:valid?"var(--color-text-primary)":"var(--color-border-tertiary)",color:valid?"var(--color-background-primary)":"var(--color-text-tertiary)",cursor:valid?"pointer":"default",fontSize:14,fontWeight:500}}>
+              {isNew?"Creează agentul":"Salvează"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SidebarItem({ agent, isActive, onClick, onEdit, onDelete, collapsed }) {
+  const [hover, setHover] = useState(false);
+  const lastMsg = agent.history?.filter(m=>m.role==="user").slice(-1)[0];
+  if (collapsed) return (
+    <div onClick={onClick} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)} title={agent.name}
+      style={{display:"flex",justifyContent:"center",padding:"5px 0",borderRadius:8,cursor:"pointer",background:isActive||hover?"var(--color-background-secondary)":"transparent",margin:"0 4px"}}>
+      <Avatar agent={agent} size={30}/>
+    </div>
+  );
+  return (
+    <div onClick={onClick} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
+      style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",borderRadius:8,cursor:"pointer",background:isActive||hover?"var(--color-background-secondary)":"transparent",transition:"background 0.1s"}}>
+      <Avatar agent={agent} size={30}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{agent.name}</div>
+        <div style={{fontSize:11,color:"var(--color-text-secondary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+          {lastMsg ? lastMsg.content.slice(0,36)+(lastMsg.content.length>36?"…":"") : agent.description}
+        </div>
+      </div>
+      {(hover||isActive) && (
+        <div style={{display:"flex",gap:1}} onClick={e=>e.stopPropagation()}>
+          <button onClick={()=>onEdit(agent)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 5px",borderRadius:4,color:"var(--color-text-secondary)",display:"flex"}}><EditIcon/></button>
+          <button onClick={()=>onDelete(agent.id)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px 5px",borderRadius:4,color:"var(--color-text-secondary)",display:"flex"}}><TrashIcon/></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ApiKeyScreen({ onSave }) {
+  const [key, setKey] = useState("");
+  const [show, setShow] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [err, setErr] = useState("");
+  const valid = key.trim().startsWith("sk-ant-");
+  const save = async () => {
+    if (!valid) return;
+    setTesting(true); setErr("");
+    try {
+      localStorage.setItem(API_KEY_STORAGE, key.trim());
+      await callClaude("Say OK in one word.", [{role:"user",content:"ping"}]);
+      onSave();
+    } catch(e) {
+      setErr("API key invalid. Verifică și încearcă din nou.");
+      localStorage.removeItem(API_KEY_STORAGE);
+    }
+    setTesting(false);
+  };
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",padding:32,background:"var(--color-background-primary)"}}>
+      <img src={LOGO_SRC} alt="DD" style={{width:64,height:64,objectFit:"contain",marginBottom:24}}/>
+      <div style={{fontSize:22,fontWeight:500,marginBottom:8}}>Agent Console</div>
+      <div style={{fontSize:14,color:"var(--color-text-secondary)",marginBottom:32,textAlign:"center",maxWidth:400,lineHeight:1.7}}>
+        Introdu API key-ul Anthropic. Se salvează doar local în browser, pe calculatorul tău.
+      </div>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{fontSize:11,color:"var(--color-text-secondary)",fontWeight:500,textTransform:"uppercase",letterSpacing:0.5,marginBottom:6}}>Anthropic API Key</div>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          <input type={show?"text":"password"} value={key} onChange={e=>setKey(e.target.value)} onKeyDown={e=>e.key==="Enter"&&save()}
+            placeholder="sk-ant-api03-..."
+            style={{flex:1,padding:"10px 14px",borderRadius:10,fontSize:13,border:"0.5px solid var(--color-border-secondary)",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",outline:"none",fontFamily:"var(--font-mono)"}}/>
+          <button onClick={()=>setShow(s=>!s)} style={{padding:"10px 12px",borderRadius:10,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:12,color:"var(--color-text-secondary)"}}>{show?"🙈":"👁"}</button>
+        </div>
+        {err && <div style={{fontSize:13,color:"#A32D2D",marginBottom:10,padding:"8px 12px",borderRadius:8,background:"#FCEBEB"}}>{err}</div>}
+        <button onClick={save} disabled={!valid||testing}
+          style={{width:"100%",padding:11,borderRadius:10,border:"none",background:valid&&!testing?"var(--color-text-primary)":"var(--color-border-tertiary)",color:valid&&!testing?"var(--color-background-primary)":"var(--color-text-tertiary)",cursor:valid&&!testing?"pointer":"default",fontSize:14,fontWeight:500}}>
+          {testing?"Se verifică…":"Continuă →"}
+        </button>
+        <div style={{marginTop:14,fontSize:12,color:"var(--color-text-tertiary)",textAlign:"center",lineHeight:1.7}}>
+          Key-ul se stochează doar pe acest dispozitiv.<br/>
+          <a href="https://console.anthropic.com/keys" target="_blank" style={{color:"var(--color-text-secondary)"}}>console.anthropic.com/keys</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App({ onLogout }) {
+  const [agents, setAgents] = useState(()=>loadAgents()||DEFAULT_AGENTS);
+  const [activeId, setActiveId] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
+  const [tab, setTab] = useState("agents");
+
+  useEffect(()=>{saveAgents(agents);},[agents]);
+
+  const activeAgent = agents.find(a=>a.id===activeId)||null;
+  const filtered = agents.filter(a=>
+    a.name.toLowerCase().includes(search.toLowerCase())||
+    (a.description||"").toLowerCase().includes(search.toLowerCase())||
+    (a.skills||[]).some(s=>s.toLowerCase().includes(search.toLowerCase()))
+  );
+  const updateHistory = useCallback((id,history)=>{ setAgents(prev=>prev.map(a=>a.id===id?{...a,history}:a)); },[]);
+  const deleteAgent = (id) => { if(!confirm("Ștergi agentul?"))return; setAgents(p=>p.filter(a=>a.id!==id)); if(activeId===id)setActiveId(null); };
+  const saveAgent = (agent) => { setAgents(p=>{ const e=p.find(a=>a.id===agent.id); return e?p.map(a=>a.id===agent.id?{...a,...agent}:a):[...p,agent]; }); setModal(null); };
+  const totalMsgs = agents.reduce((s,a)=>s+(a.history?.filter(m=>m.role==="user").length||0),0);
+
+  return (
+    <div style={{display:"flex",height:"100vh",fontFamily:"var(--font-sans)",background:"var(--color-background-primary)"}}>
+      <div style={{width:collapsed?52:256,flexShrink:0,display:"flex",flexDirection:"column",borderRight:"0.5px solid var(--color-border-tertiary)",background:"var(--color-background-tertiary)",overflow:"hidden",transition:"width 0.22s cubic-bezier(0.4,0,0.2,1)",boxShadow:"2px 0 12px rgba(0,0,0,0.08)"}}>
+        <div style={{padding:collapsed?"12px 0 8px":"12px 12px 8px",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",marginBottom:10}}>
+            {!collapsed && <div style={{display:"flex",alignItems:"center",gap:8}}><img src={LOGO_SRC} alt="DD" style={{width:24,height:24,objectFit:"contain"}}/><span style={{fontSize:14,fontWeight:500}}>Console</span></div>}
+            <button onClick={()=>setCollapsed(c=>!c)} style={{background:"none",border:"none",cursor:"pointer",padding:"5px 6px",borderRadius:6,color:"var(--color-text-secondary)",display:"flex"}}
+              onMouseEnter={e=>e.currentTarget.style.background="var(--color-background-secondary)"}
+              onMouseLeave={e=>e.currentTarget.style.background="none"}>
+              <CollapseIcon flipped={collapsed}/>
+            </button>
+          </div>
+          {!collapsed ? (
+            <>
+              <div style={{display:"flex",borderRadius:8,background:"var(--color-background-secondary)",padding:3,gap:2,marginBottom:10}}>
+                {[{k:"agents",l:"Agenți"},{k:"chat",l:"Chat liber"}].map(t=>(
+                  <button key={t.k} onClick={()=>setTab(t.k)}
+                    style={{flex:1,padding:"5px 8px",borderRadius:6,border:"none",cursor:"pointer",fontSize:12,fontWeight:tab===t.k?500:400,background:tab===t.k?"var(--color-background-primary)":"transparent",color:tab===t.k?"var(--color-text-primary)":"var(--color-text-secondary)",boxShadow:tab===t.k?"0 0.5px 3px rgba(0,0,0,0.1)":"none",transition:"all 0.15s"}}>{t.l}</button>
+                ))}
+              </div>
+              {tab==="agents" && <button onClick={()=>setModal({type:"new"})}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:7,padding:"7px 10px",borderRadius:8,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:13,color:"var(--color-text-secondary)"}}
+                onMouseEnter={e=>e.currentTarget.style.background="var(--color-background-secondary)"}
+                onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                <PlusIcon/> Agent nou
+              </button>}
+            </>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"center"}}>
+              {[{k:"agents",l:"A"},{k:"chat",l:"C"}].map(t=>(
+                <button key={t.k} onClick={()=>{setTab(t.k);setCollapsed(false);}} title={t.k==="agents"?"Agenți":"Chat liber"}
+                  style={{background:tab===t.k?"var(--color-background-secondary)":"none",border:"0.5px solid var(--color-border-secondary)",borderRadius:8,width:32,height:26,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",color:"var(--color-text-secondary)",fontSize:11,fontWeight:500}}>{t.l}</button>
+              ))}
+            </div>
+          )}
+        </div>
+        {!collapsed && tab==="agents" && (
+          <div style={{padding:"0 12px 8px",flexShrink:0}}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Caută…"
+              style={{width:"100%",padding:"7px 10px",borderRadius:8,fontSize:12,border:"0.5px solid var(--color-border-secondary)",boxSizing:"border-box",background:"var(--color-background-secondary)",color:"var(--color-text-primary)",outline:"none"}}/>
+          </div>
+        )}
+        <div style={{flex:1,overflowY:"auto",padding:"0 6px 12px"}}>
+          {tab==="agents" && filtered.map(a=>(
+            <SidebarItem key={a.id} agent={a} isActive={activeId===a.id}
+              onClick={()=>setActiveId(a.id)}
+              onEdit={ag=>setModal({type:"edit",agent:ag})}
+              onDelete={deleteAgent} collapsed={collapsed}/>
+          ))}
+          {tab==="chat" && !collapsed && <div style={{padding:"12px 8px 0",fontSize:12,color:"var(--color-text-secondary)",lineHeight:1.6}}>Chat direct cu Claude, fără restricții.</div>}
+        </div>
+        {!collapsed && (
+          <div style={{padding:"10px 14px",borderTop:"0.5px solid var(--color-border-tertiary)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+            {tab==="agents" && <span style={{fontSize:11,color:"var(--color-text-tertiary)"}}>{agents.length} agenți · {totalMsgs} mesaje</span>}
+            <button onClick={()=>{if(confirm("Schimbi API key-ul?"))onLogout();}} style={{background:"none",border:"none",fontSize:11,color:"var(--color-text-tertiary)",cursor:"pointer",marginLeft:"auto"}}>⚙ Key</button>
+          </div>
+        )}
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflow:"hidden"}}>
+        {tab==="chat" ? <FreeChatPanel key="free"/>
+        : activeAgent ? (
+          <ChatPanel key={activeAgent.id} agent={agents.find(a=>a.id===activeAgent.id)||activeAgent}
+            onUpdateHistory={h=>updateHistory(activeAgent.id,h)} onClose={()=>setActiveId(null)}/>
+        ) : (
+          <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48,textAlign:"center"}}>
+            <img src={LOGO_SRC} alt="DD" style={{width:70,height:70,objectFit:"contain",opacity:0.85}}/>
+            <div style={{marginTop:18,fontSize:20,fontWeight:500}}>Agent Console</div>
+            <div style={{marginTop:8,fontSize:14,color:"var(--color-text-secondary)",maxWidth:360,lineHeight:1.75}}>Selectează un agent sau folosește Chat liber pentru a vorbi direct cu Claude.</div>
+            <div style={{display:"flex",gap:8,marginTop:22}}>
+              <button onClick={()=>setModal({type:"new"})} style={{padding:"9px 18px",borderRadius:8,border:"0.5px solid var(--color-border-secondary)",background:"none",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:7}}><PlusIcon/> Agent nou</button>
+              <button onClick={()=>setTab("chat")} style={{padding:"9px 18px",borderRadius:8,border:"none",background:"var(--color-text-primary)",cursor:"pointer",fontSize:13,color:"var(--color-background-primary)"}}>Chat liber →</button>
+            </div>
+          </div>
+        )}
+      </div>
+      {modal && <AgentModal agent={modal.type==="edit"?modal.agent:null} onSave={saveAgent} onClose={()=>setModal(null)}/>}
+    </div>
+  );
+}
+
+function Root() {
+  const [hasKey, setHasKey] = useState(()=>!!localStorage.getItem(API_KEY_STORAGE));
+  if (!hasKey) return <ApiKeyScreen onSave={()=>setHasKey(true)}/>;
+  return <App onLogout={()=>{localStorage.removeItem(API_KEY_STORAGE);setHasKey(false);}}/>;
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<Root/>);
+</script>
+</body>
+</html>
