@@ -84,9 +84,10 @@ function getApiKey() { try { return localStorage.getItem(API_KEY_STORAGE)||""; }
 async function callClaude(systemPrompt, messages) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("NO_KEY");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const PROXY_URL = "PROXY_URL_PLACEHOLDER";
+  const res = await fetch(PROXY_URL, {
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-allow-browser":"true"},
+    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
     body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:2000, system:systemPrompt, messages })
   });
   const data = await res.json();
