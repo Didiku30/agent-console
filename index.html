@@ -84,7 +84,7 @@ function getApiKey() { try { return localStorage.getItem(API_KEY_STORAGE)||""; }
 async function callClaude(systemPrompt, messages) {
   const apiKey = getApiKey();
   if (!apiKey) throw new Error("NO_KEY");
-  const PROXY_URL = "PROXY_URL_PLACEHOLDER";
+  const PROXY_URL = "https://anthropic-proxy.drevediana.workers.dev";
   const res = await fetch(PROXY_URL, {
     method:"POST",
     headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
